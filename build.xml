@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="deploy">
+    <property name="artifacts" value="artifacts"/>
+    <property file="${artifacts}/deploy.properties"/>
+
+    <macrodef name="appcfg" description="Manages an application">
+        <attribute name="war" description="The exploded war directory containing the application"/>
+        <attribute name="action" description="One of (update, rollback, update_indexes, request_logs)"/>
+        <attribute name="username"/>
+        <attribute name="password"/>
+        <element name="options" optional="true"
+                 description="Options for appcfg (such as --server, --num_days, etc...)"/>
+        <element name="args" optional="true" description="Additional arguments for the java task"/>
+
+        <sequential>
+            <java classname="com.google.appengine.tools.admin.AppCfg"
+                  classpath="sdk/lib/appengine-tools-api.jar"
+                  fork="true" failonerror="true"
+                  inputstring="@{password}">
+                <arg value="--passin"/>
+                <arg value="--email=@{username}"/>
+                <arg value="@{action}"/>
+                <arg value="@{war}"/>
+            </java>
+        </sequential>
+    </macrodef>
+
+    <target name="deploy">
+        <property name="exploded" value="artifacts/exploded"/>
+        <delete dir="${exploded}"/>
+        <unzip src="${artifacts}/${deploy.war}" dest="${exploded}"/>
+
+        <copy file="sdk/lib/appengine-tools-api.jar" tofile="${exploded}/WEB-INF/lib/appengine-tools-api.jar"/>
+        <property name="exploded" value="artifacts/exploded"/>
+
+        <copy file="appengine-web.xml" tofile="${exploded}/WEB-INF/appengine-web.xml">
+            <filterset>
+                <filter token="APPLICATION" value="${deploy.name}"/>
+            </filterset>
+        </copy>
+
+        <appcfg action="update" war="${exploded}" username="${deploy.username}" password="${deploy.password}"/>
+        <!--delete dir="${exploded}"/-->
+    </target>
+
+</project>
